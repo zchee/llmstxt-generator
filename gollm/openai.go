@@ -24,7 +24,7 @@ import (
 
 	"github.com/go-json-experiment/json"
 	"github.com/kaptinlin/jsonrepair"
-	"github.com/openai/openai-go"
+	openai "github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
 	"github.com/openai/openai-go/shared"
 )
