@@ -3,6 +3,7 @@ module github.com/zchee/llmstxt-generator
 go 1.24
 
 require (
+	github.com/anthropics/anthropic-sdk-go v1.7.0
 	github.com/go-json-experiment/json v0.0.0-20250725192818-e39067aee2d2
 	github.com/kaptinlin/jsonrepair v0.2.1
 	github.com/mendableai/firecrawl-go/v2 v2.0.0

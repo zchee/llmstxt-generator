@@ -30,16 +30,15 @@ import (
 	"os"
 	"time"
 
-	openai "github.com/openai/openai-go"
-
 	"github.com/zchee/llmstxt-generator/generator"
+	"github.com/zchee/llmstxt-generator/gollm"
 )
 
 // Config represents the configuration for the llmstxt-generator.
 type Config struct {
 	FirecrawlAPIKey  string
-	OpenAIAPIKey     string
-	OpenAIModel      string
+	APIKey           string
+	Model            string
 	MaxURLs          int
 	OutputDir        string
 	NoFullText       bool
@@ -50,14 +49,14 @@ type Config struct {
 	Timeout          time.Duration
 	MaxContentLength int
 	FirecrawlOptions generator.FirecrawlOptions
+	OpenAIOption     gollm.OpenAIConfig
+	AnthropicOption  gollm.AnthropicConfig
 }
 
 // New returns the default configuration for the llmstxt-generator.
 func New() *Config {
 	return &Config{
 		FirecrawlAPIKey: os.Getenv("FIRECRAWL_API_KEY"),
-		OpenAIAPIKey:    os.Getenv("OPENAI_API_KEY"),
-		OpenAIModel:     openai.ChatModelGPT4_1Mini,
 		MaxURLs:         20,
 		OutputDir:       ".",
 		NoFullText:      false,
@@ -76,6 +75,16 @@ func New() *Config {
 			IncludeSubdomains: false,                // Default conservative setting
 			IgnoreSitemap:     false,                // Default conservative setting
 		},
+		OpenAIOption: gollm.OpenAIConfig{
+			Config: gollm.Config{
+				APIKey: os.Getenv("OPENAI_API_KEY"),
+			},
+		},
+		AnthropicOption: gollm.AnthropicConfig{
+			Config: gollm.Config{
+				APIKey: os.Getenv("ANTHROPIC_API_KEY"),
+			},
+		},
 	}
 }
 
@@ -83,10 +92,6 @@ func New() *Config {
 func (c *Config) Validate() error {
 	if c.FirecrawlAPIKey == "" {
 		return fmt.Errorf("Firecrawl API key not provided. Set FIRECRAWL_API_KEY environment variable or use --firecrawl-api-key flag")
-	}
-
-	if c.OpenAIAPIKey == "" {
-		return fmt.Errorf("OpenAI API key not provided. Set OPENAI_API_KEY environment variable or use --openai-api-key flag")
 	}
 
 	if c.MaxURLs <= 0 {
