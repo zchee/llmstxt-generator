@@ -50,10 +50,10 @@ import (
 //   - options: Configuration options for generation behavior, timeouts, and processing limits
 //
 // Returns a configured generator ready to process websites and generate llms.txt files.
-func NewLLMsTxtGenerator(firecrawlClient FirecrawlClient, openaiClient gollm.OpenAIClient, options GenerationOptions) *LLMsTxtGenerator {
+func NewLLMsTxtGenerator(firecrawlClient FirecrawlClient, SummarizerClient gollm.SummarizerClient, options GenerationOptions) *LLMsTxtGenerator {
 	return &LLMsTxtGenerator{
 		firecrawlClient: firecrawlClient,
-		openaiClient:    openaiClient,
+		summarizer:      SummarizerClient,
 		options:         options,
 	}
 }
@@ -216,7 +216,7 @@ func (g *LLMsTxtGenerator) processURL(ctx context.Context, uri string, index int
 		System: g.SystemPrompt(),
 		User:   g.UserPrompt(uri),
 	}
-	title, description, err := g.openaiClient.SummarizeContent(ctx, prompt, scrapedData.Markdown)
+	title, description, err := g.summarizer.SummarizeContent(ctx, prompt, scrapedData.Markdown)
 	if err != nil {
 		logger.WarnContext(ctx, "Failed to generate description, using defaults", "url", uri, "error", err)
 		title = "Page"

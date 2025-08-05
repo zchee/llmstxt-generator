@@ -73,7 +73,7 @@ type FirecrawlClient interface {
 
 type LLMsTxtGenerator struct {
 	firecrawlClient FirecrawlClient
-	openaiClient    gollm.OpenAIClient
+	summarizer      gollm.SummarizerClient
 	options         GenerationOptions
 }
 

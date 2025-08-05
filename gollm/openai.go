@@ -24,20 +24,14 @@ import (
 
 	"github.com/go-json-experiment/json"
 	"github.com/kaptinlin/jsonrepair"
-	"github.com/openai/openai-go"
+	openai "github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
 	"github.com/openai/openai-go/shared"
 )
 
-// Prompt defines the structure of the prompt used for summarizing content.
-type Prompt struct {
-	System string
-	User   string
-}
-
-// OpenAIClient defines the interface for interacting with OpenAI's API to summarize and generate titles and descriptions contents.
-type OpenAIClient interface {
-	SummarizeContent(ctx context.Context, prompt Prompt, content string) (title, description string, err error)
+// OpenAIConfig contains the configuration for the OpenAI client.
+type OpenAIConfig struct {
+	Config
 }
 
 type openaiClient struct {
@@ -47,9 +41,9 @@ type openaiClient struct {
 	logger           *slog.Logger
 }
 
-var _ OpenAIClient = (*openaiClient)(nil)
+var _ SummarizerClient = (*openaiClient)(nil)
 
-// NewOpenAIClient creates a new instance of [OpenAIClient] given the API key, model, maximum content length and request options.
+// NewOpenAIClient creates a new instance of [SummarizerClient] given the API key, model, maximum content length and request options.
 func NewOpenAIClient(apiKey, model string, maxContentLength int, opts ...option.RequestOption) *openaiClient {
 	client := openai.NewClient(option.WithAPIKey(apiKey))
 
@@ -57,11 +51,13 @@ func NewOpenAIClient(apiKey, model string, maxContentLength int, opts ...option.
 		client:           &client,
 		model:            model,
 		maxContentLength: maxContentLength,
-		logger:           slog.Default(),
+		logger:           slog.Default().WithGroup("openai"),
 	}
 }
 
 // SummarizeContent summarizes and generates a title and description for the given uri and content using OpenAI LLM model.
+//
+// SummarizeContent implements [SummarizerClient].
 func (o *openaiClient) SummarizeContent(ctx context.Context, prompt Prompt, content string) (title, description string, err error) {
 	o.logger.DebugContext(ctx, "Summarizes description",
 		slog.Group("prompt",

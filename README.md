@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Go Version](https://img.shields.io/badge/go-%3E%3D1.24-00ADD8.svg)](https://go.dev/)
 
-A high-performance Go implementation of the llms.txt generator that uses [Firecrawl](https://www.firecrawl.dev/) to map and scrape websites, and any LLM providers (Currently only supports [OpenAI](https://openai.com/)) to generate concise titles and descriptions for creating structured llms.txt files.
+A high-performance Go implementation of the llms.txt generator that uses [Firecrawl](https://www.firecrawl.dev/) to map and scrape websites, and any LLM providers (Currently only supports [OpenAI](https://openai.com/) and [Anthropic](https://www.anthropic.com/)) to generate concise titles and descriptions for creating structured llms.txt files.
 
 > [!IMPORTANT]
 > This project is in the alpha stage.
@@ -37,14 +37,14 @@ It intelligently crawls websites, extracts content, and uses AI to create meanin
 ### Key Benefits
 
 - **Automated Discovery**: Automatically maps your entire website structure
-- **AI-Powered Summaries**: Uses OpenAI to generate concise, meaningful descriptions
+- **AI-Powered Summaries**: Uses OpenAI or Anthropic to generate concise, meaningful descriptions
 - **Performance Optimized**: Concurrent processing with configurable batching and rate limiting
 - **Flexible Output**: Generates both summary (`llms.txt`) and full content (`llms-full.txt`) versions
 
 ## Features
 
 - 🚀 **High-Performance Concurrent Processing**: Process multiple URLs simultaneously with configurable worker pools
-- 🤖 **Multiple AI Model Support**: Compatible with GPT-4, GPT-4 Turbo, and other OpenAI models
+- 🤖 **Multiple AI Model Support**: Compatible with GPT-4, Claude Opus, and other OpenAI and Anthropic models
 - 📊 **Intelligent Batching**: Process URLs in configurable batches with automatic rate limiting
 - 🔧 **Highly Configurable**: Extensive CLI flags and environment variable support
 - 📝 **Dual Output Formats**: Generate both concise summaries and full-text versions
@@ -88,7 +88,7 @@ go build -o llmstxt-generator
 Before using llmstxt-generator, you'll need:
 
 1. **Firecrawl API Key**: Sign up at [firecrawl.dev](https://www.firecrawl.dev/) to get your API key
-2. **OpenAI API Key**: Get your API key from [OpenAI Platform](https://platform.openai.com/)
+2. **OpenAI API Key**: [OpenAI Platform](https://platform.openai.com/) or **Anthropic API Key**: [anthropic Console](https://console.anthropic.com/settings/keys/)
 3. **Go 1.24+**: Required if building from source
 
 ### Setting up API Keys
@@ -98,6 +98,7 @@ Set your API keys as environment variables:
 ```bash
 export FIRECRAWL_API_KEY="your-firecrawl-api-key"
 export OPENAI_API_KEY="your-openai-api-key"
+export ANTHROPIC_API_KEY="your-anthropic-api-key"
 ```
 
 Or pass them directly via command-line flags.
@@ -126,11 +127,11 @@ llmstxt-generator https://example.com --model gpt-4-turbo-preview
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `--model` | OpenAI model for generating summaries | `gpt-4.1-mini` |
+| `--model` | OpenAI model for generating summaries | `gpt-4.1-mini`, `claude-opus-4-1` |
 | `--max-urls` | Maximum number of URLs to process | `20` |
 | `--output-dir` | Directory to save output files | `.` (current) |
 | `--firecrawl-api-key` | Firecrawl API key | `$FIRECRAWL_API_KEY` |
-| `--openai-api-key` | OpenAI API key | `$OPENAI_API_KEY` |
+| `--api-key` | OpenAI or Anthropic API key | `$OPENAI_API_KEY` or `$ANTHROPIC_API_KEY` |
 | `--no-full-text` | Skip generating llms-full.txt | `false` |
 | `--verbose` | Enable verbose logging | `false` |
 | `--batch-size` | Number of URLs per batch | `10` |
@@ -143,6 +144,7 @@ llmstxt-generator https://example.com --model gpt-4-turbo-preview
 
 - `FIRECRAWL_API_KEY`: Your Firecrawl API key
 - `OPENAI_API_KEY`: Your OpenAI API key
+- `ANTHROPIC_API_KEY`: Your Anthropic API key
 
 ## Usage Examples
 
@@ -229,7 +231,7 @@ Founded in 2020, Example.com has grown to become...
 1. **CLI Layer** (`cmd/`): Handles command-line parsing and user interaction
 2. **Configuration** (`config/`): Manages settings, validation, and defaults
 3. **Generator** (`generator/`): Core business logic for content generation
-4. **API Clients**: Abstracted interfaces for Firecrawl and OpenAI services
+4. **API Clients** (`gollm/`): Abstracted interfaces for OpenAI and Anthropic services
 
 ## Performance
 

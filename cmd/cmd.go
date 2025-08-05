@@ -93,14 +93,19 @@ func init() {
 	// masking sensitive API values
 	fireCrawlAPIKey, restoreFC := maskVal(cfg.FirecrawlAPIKey)
 	defer func() { cfg.FirecrawlAPIKey = restoreFC() }()
-	openAIAPIKey, restoreOAI := maskVal(cfg.OpenAIAPIKey)
-	defer func() { cfg.OpenAIAPIKey = restoreOAI() }()
 
-	llmstxtGeneratorCmd.Flags().StringVar(&cfg.OpenAIModel, "model", cfg.OpenAIModel, "LLM model for summaries and generating concise titles and descriptions")
+	var apiKey string
+	if cfg.APIKey != "" {
+		llmAPIKey, restoreAPIKey := maskVal(cfg.APIKey)
+		apiKey = llmAPIKey
+		defer func() { cfg.APIKey = restoreAPIKey() }()
+	}
+
+	llmstxtGeneratorCmd.Flags().StringVar(&cfg.Model, "model", cfg.Model, "LLM model for summaries and generating concise titles and descriptions")
 	llmstxtGeneratorCmd.Flags().IntVar(&cfg.MaxURLs, "max-urls", cfg.MaxURLs, "Maximum number of URLs to process")
 	llmstxtGeneratorCmd.Flags().StringVar(&cfg.OutputDir, "output-dir", cfg.OutputDir, "Directory to save output files")
 	llmstxtGeneratorCmd.Flags().StringVar(&cfg.FirecrawlAPIKey, "firecrawl-api-key", fireCrawlAPIKey, "Firecrawl API key")
-	llmstxtGeneratorCmd.Flags().StringVar(&cfg.OpenAIAPIKey, "openai-api-key", openAIAPIKey, "OpenAI API key")
+	llmstxtGeneratorCmd.Flags().StringVar(&cfg.APIKey, "api-key", apiKey, "LLM client API key")
 	llmstxtGeneratorCmd.Flags().BoolVar(&cfg.NoFullText, "no-full-text", cfg.NoFullText, "Don't generate llms-full.txt file")
 	llmstxtGeneratorCmd.Flags().BoolVar(&cfg.Verbose, "verbose", cfg.Verbose, "Enable verbose logging")
 	llmstxtGeneratorCmd.Flags().IntVar(&cfg.BatchSize, "batch-size", cfg.BatchSize, "Number of URLs to process in each batch")
@@ -108,6 +113,123 @@ func init() {
 	llmstxtGeneratorCmd.Flags().DurationVar(&cfg.BatchDelay, "batch-delay", cfg.BatchDelay, "Delay between batches")
 	llmstxtGeneratorCmd.Flags().DurationVar(&cfg.Timeout, "timeout", cfg.Timeout, "Timeout for individual URL processing")
 	llmstxtGeneratorCmd.Flags().IntVar(&cfg.MaxContentLength, "max-content-length", cfg.MaxContentLength, "Maximum content length for OpenAI processing (0 for unlimited)")
+}
+
+// OpenAI:
+// - "chatgpt-4o-latest"
+// - "codex-mini-latest"
+// - "gpt-3.5-turbo"
+// - "gpt-3.5-turbo-0125"
+// - "gpt-3.5-turbo-0301"
+// - "gpt-3.5-turbo-0613"
+// - "gpt-3.5-turbo-1106"
+// - "gpt-3.5-turbo-16k"
+// - "gpt-3.5-turbo-16k-0613"
+// - "gpt-4"
+// - "gpt-4-0125-preview"
+// - "gpt-4-0314"
+// - "gpt-4-0613"
+// - "gpt-4.1"
+// - "gpt-4-1106-preview"
+// - "gpt-4.1-2025-04-14"
+// - "gpt-4.1-mini"
+// - "gpt-4.1-mini-2025-04-14"
+// - "gpt-4.1-nano"
+// - "gpt-4.1-nano-2025-04-14"
+// - "gpt-4-32k"
+// - "gpt-4-32k-0314"
+// - "gpt-4-32k-0613"
+// - "gpt-4o"
+// - "gpt-4o-2024-05-13"
+// - "gpt-4o-2024-08-06"
+// - "gpt-4o-2024-11-20"
+// - "gpt-4o-audio-preview"
+// - "gpt-4o-audio-preview-2024-10-01"
+// - "gpt-4o-audio-preview-2024-12-17"
+// - "gpt-4o-audio-preview-2025-06-03"
+// - "gpt-4o-mini"
+// - "gpt-4o-mini-2024-07-18"
+// - "gpt-4o-mini-audio-preview"
+// - "gpt-4o-mini-audio-preview-2024-12-17"
+// - "gpt-4o-mini-search-preview"
+// - "gpt-4o-mini-search-preview-2025-03-11"
+// - "gpt-4o-search-preview"
+// - "gpt-4o-search-preview-2025-03-11"
+// - "gpt-4-turbo"
+// - "gpt-4-turbo-2024-04-09"
+// - "gpt-4-turbo-preview"
+// - "gpt-4-vision-preview"
+// - "o1"
+// - "o1-2024-12-17"
+// - "o1-mini"
+// - "o1-mini-2024-09-12"
+// - "o1-preview"
+// - "o1-preview-2024-09-12"
+// - "o3"
+// - "o3-2025-04-16"
+// - "o3-mini"
+// - "o3-mini-2025-01-31"
+// - "o4-mini"
+// - "o4-mini-2025-04-16"
+//
+// Anthropic:
+// - "claude-3-5-haiku-20241022"
+// - "claude-3-5-haiku-latest"
+// - "claude-3-5-sonnet-20241022"
+// - "claude-3-5-sonnet-latest"
+// - "claude-3-7-sonnet-20250219"
+// - "claude-3-7-sonnet-latest"
+// - "claude-4-opus-20250514"
+// - "claude-4-sonnet-20250514"
+// - "claude-3-5-sonnet-20240620"
+// - "claude-opus-4-0"
+// - "claude-opus-4-1-20250805"
+// - "claude-opus-4-20250514"
+// - "claude-sonnet-4-0"
+// - "claude-sonnet-4-20250514"
+
+func detectClientFromModel(cfg *config.Config) gollm.SummarizerClient {
+	var summarizerFunc func(apiKey string) gollm.SummarizerClient
+
+	isOpenAI := func(model string) bool {
+		openAIModelPrefixes := []string{
+			"chatgpt-",
+			"codex-",
+			"gpt-",
+			"o1",
+			"o3",
+			"o4",
+		}
+		for _, prefix := range openAIModelPrefixes {
+			if strings.HasPrefix(model, prefix) {
+				return true
+			}
+		}
+		return false
+	}
+
+	switch {
+	case strings.HasPrefix(cfg.Model, "claude-"):
+		if cfg.APIKey == "" {
+			cfg.APIKey = cfg.AnthropicOption.APIKey
+		}
+		summarizerFunc = func(apiKey string) gollm.SummarizerClient {
+			return gollm.NewAnthropicClient(apiKey, cfg.Model, cfg.MaxContentLength)
+		}
+
+	case isOpenAI(cfg.Model):
+		if cfg.APIKey == "" {
+			cfg.APIKey = cfg.OpenAIOption.APIKey
+		}
+		summarizerFunc = func(apiKey string) gollm.SummarizerClient {
+			return gollm.NewOpenAIClient(apiKey, cfg.Model, cfg.MaxContentLength)
+		}
+
+	default:
+		panic(fmt.Errorf("unkonwn model: %v", cfg.Model))
+	}
+
+	return summarizerFunc(cfg.APIKey)
 }
 
 func generate(cmd *cobra.Command, args []string) (err error) {
@@ -137,10 +259,10 @@ func generate(cmd *cobra.Command, args []string) (err error) {
 	if err != nil {
 		return err
 	}
-	openaiClient := gollm.NewOpenAIClient(cfg.OpenAIAPIKey, cfg.OpenAIModel, cfg.MaxContentLength)
 
+	client := detectClientFromModel(cfg)
 	options := generator.GenerationOptions{
-		Model:            cfg.OpenAIModel,
+		Model:            cfg.Model,
 		MaxURLs:          cfg.MaxURLs,
 		OutputDir:        cfg.OutputDir,
 		NoFullText:       cfg.NoFullText,
@@ -153,7 +275,7 @@ func generate(cmd *cobra.Command, args []string) (err error) {
 		FirecrawlOptions: cfg.FirecrawlOptions,
 	}
 
-	gen := generator.NewLLMsTxtGenerator(firecrawlClient, openaiClient, options)
+	gen := generator.NewLLMsTxtGenerator(firecrawlClient, client, options)
 
 	result, err := gen.GenerateLLMsTXT(cmd.Context(), targetURL)
 	if err != nil {
