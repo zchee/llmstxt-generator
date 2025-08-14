@@ -151,8 +151,6 @@ func (c *anthropicClient) SummarizeContent(ctx context.Context, prompt Prompt, c
 				c.logger.ErrorContext(ctx, "Repair JSON payload dailed", slog.Any("error", err))
 			}
 
-			fmt.Printf("data: %#v\n", data)
-
 			var result DescriptionRequest
 			jsonOpts := json.JoinOptions(
 				json.DiscardUnknownMembers(true), // strictly parsing
