@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 
 	anthropic "github.com/anthropics/anthropic-sdk-go"
@@ -27,6 +28,22 @@ import (
 	"github.com/go-json-experiment/json"
 	"github.com/kaptinlin/jsonrepair"
 )
+
+// Anthropic models from https://github.com/anthropics/anthropic-sdk-go/blob/v1.9.1/message.go#L1859-L1872.
+// "claude-3-7-sonnet-latest"
+// "claude-3-7-sonnet-20250219"
+// "claude-3-5-haiku-latest"
+// "claude-3-5-haiku-20241022"
+// "claude-sonnet-4-20250514"
+// "claude-sonnet-4-0"
+// "claude-4-sonnet-20250514"
+// "claude-3-5-sonnet-latest"
+// "claude-3-5-sonnet-20241022"
+// "claude-3-5-sonnet-20240620"
+// "claude-opus-4-0"
+// "claude-opus-4-20250514"
+// "claude-4-opus-20250514"
+// "claude-opus-4-1-20250805"
 
 // AnthropicConfig contains the configuration for the Anthropic client.
 type AnthropicConfig struct {
@@ -44,7 +61,28 @@ var _ SummarizerClient = (*anthropicClient)(nil)
 
 // NewAnthropicClient creates a new instance of [SummarizerClient] given the API key, model, maximum content length and request options.
 func NewAnthropicClient(apiKey, model string, maxContentLength int, opts ...option.RequestOption) *anthropicClient {
-	client := anthropic.NewClient(opts...)
+	cOpts := []option.RequestOption{
+		option.WithEnvironmentProduction(),
+	}
+	if val, ok := os.LookupEnv("ANTHROPIC_BASE_URL"); ok {
+		cOpts = append(cOpts, option.WithBaseURL(val))
+	}
+	if val, ok := os.LookupEnv("ANTHROPIC_API_KEY"); ok {
+		cOpts = append(cOpts, option.WithAPIKey(val))
+	}
+	if val, ok := os.LookupEnv("ANTHROPIC_AUTH_TOKEN"); ok {
+		cOpts = append(cOpts, option.WithAuthToken(val))
+	}
+	// [option.RequestOption] are last win
+	cOpts = append(cOpts, opts...)
+
+	client := anthropic.Client{
+		Options:     cOpts,
+		Completions: anthropic.NewCompletionService(cOpts...),
+		Messages:    anthropic.NewMessageService(cOpts...),
+		Models:      anthropic.NewModelService(cOpts...),
+		Beta:        anthropic.NewBetaService(cOpts...),
+	}
 
 	return &anthropicClient{
 		client:           client,
@@ -59,6 +97,7 @@ func NewAnthropicClient(apiKey, model string, maxContentLength int, opts ...opti
 // SummarizeContent implements [SummarizerClient].
 func (c *anthropicClient) SummarizeContent(ctx context.Context, prompt Prompt, content string) (title, description string, err error) {
 	c.logger.DebugContext(ctx, "Summarizes description",
+		slog.String("model", c.model),
 		slog.Group("prompt",
 			slog.String("system", prompt.System),
 			slog.String("user", prompt.User),
@@ -69,34 +108,35 @@ func (c *anthropicClient) SummarizeContent(ctx context.Context, prompt Prompt, c
 		content = content[:c.maxContentLength]
 	}
 
-	params := anthropic.MessageNewParams{
+	params := anthropic.BetaMessageNewParams{
 		Model: anthropic.Model(c.model),
-		System: []anthropic.TextBlockParam{
+		System: []anthropic.BetaTextBlockParam{
 			{
 				Text: prompt.System,
 			},
 		},
-		Messages: []anthropic.MessageParam{
+		Messages: []anthropic.BetaMessageParam{
 			{
-				Content: []anthropic.ContentBlockParamUnion{
-					anthropic.NewTextBlock(prompt.User),
-					anthropic.NewTextBlock(fmt.Sprintf("Page content:\n%s", content)),
+				Content: []anthropic.BetaContentBlockParamUnion{
+					anthropic.NewBetaTextBlock(prompt.User),
+					anthropic.NewBetaTextBlock(fmt.Sprintf("Page content:\n%s", content)),
 				},
-				Role: anthropic.MessageParamRoleUser,
+				Role: anthropic.BetaMessageParamRoleUser,
 			},
 		},
-		Thinking: anthropic.ThinkingConfigParamOfEnabled(51200),
 	}
+
 	switch {
 	case strings.HasPrefix(c.model, "claude-opus-"):
 		params.MaxTokens = 32000
-		params.Thinking = anthropic.ThinkingConfigParamOfEnabled(25600)
+		params.Thinking = anthropic.BetaThinkingConfigParamOfEnabled(25600)
+
 	case strings.HasPrefix(c.model, "claude-sonnet-"):
-		params.MaxTokens = 64000
-		params.Thinking = anthropic.ThinkingConfigParamOfEnabled(51200)
+		params.MaxTokens = 320000
+		params.Thinking = anthropic.BetaThinkingConfigParamOfEnabled(256000)
 	}
 
-	stream := c.client.Messages.NewStreaming(ctx, params)
+	stream := c.client.Beta.Messages.NewStreaming(ctx, params)
 
 	for stream.Next() {
 		data := stream.Current()
