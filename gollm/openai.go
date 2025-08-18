@@ -119,6 +119,11 @@ func NewOpenAIClient(apiKey, model string, maxContentLength int, opts ...option.
 	}
 }
 
+type DescriptionRequest struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
+
 // SummarizeContent summarizes and generates a title and description for the given uri and content using OpenAI LLM model.
 //
 // SummarizeContent implements [SummarizerClient].
@@ -144,11 +149,12 @@ func (c *openaiClient) SummarizeContent(ctx context.Context, prompt Prompt, cont
 		ResponseFormat: openai.ChatCompletionNewParamsResponseFormatUnion{
 			OfText: openai.Ptr(shared.NewResponseFormatTextParam()),
 		},
+		Verbosity:           openai.ChatCompletionNewParamsVerbosityHigh,
 		MaxCompletionTokens: openai.Int(25000), // https://platform.openai.com/docs/guides/reasoning#allocating-space-for-reasoning
 	}
 	switch {
 	case strings.HasPrefix(c.model, "gpt-5"):
-		params.ReasoningEffort = openai.ReasoningEffortHigh
+		params.ReasoningEffort = openai.ReasoningEffortLow
 
 	case strings.HasPrefix(c.model, "gpt"):
 		// nothing to do
@@ -197,9 +203,4 @@ func (c *openaiClient) SummarizeContent(ctx context.Context, prompt Prompt, cont
 	}
 
 	return title, description, nil
-}
-
-type DescriptionRequest struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
 }
