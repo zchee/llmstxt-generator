@@ -124,6 +124,18 @@ func (c *anthropicClient) SummarizeContent(ctx context.Context, prompt Prompt, c
 				Role: anthropic.BetaMessageParamRoleUser,
 			},
 		},
+		Betas: []anthropic.AnthropicBeta{
+			anthropic.AnthropicBetaMessageBatches2024_09_24,
+			anthropic.AnthropicBetaPromptCaching2024_07_31,
+			anthropic.AnthropicBetaPDFs2024_09_25,
+			anthropic.AnthropicBetaTokenCounting2024_11_01,
+			anthropic.AnthropicBetaFilesAPI2025_04_14,
+			anthropic.AnthropicBetaMCPClient2025_04_04,
+			anthropic.AnthropicBetaInterleavedThinking2025_05_14,
+			anthropic.AnthropicBetaCodeExecution2025_05_22,
+			anthropic.AnthropicBetaExtendedCacheTTL2025_04_11,
+			anthropic.AnthropicBetaContext1m2025_08_07,
+		},
 	}
 
 	switch {
