@@ -75,10 +75,12 @@ func (f *firecrawlClient) MapWebsite(ctx context.Context, url string, limit int,
 func (f *firecrawlClient) ScrapeURL(ctx context.Context, url string, options FirecrawlOptions) (*ScrapedData, error) {
 	f.logger.DebugContext(ctx, "Scraping URL", "url", url)
 
+	boolTrue := true
 	scrapeParams := &firecrawl.ScrapeParams{
 		Formats:         options.Formats,
 		OnlyMainContent: &options.OnlyMainContent,
 		Timeout:         &options.Timeout,
+		ParsePDF:        &boolTrue,
 	}
 
 	scrapeResponse, err := f.client.ScrapeURL(url, scrapeParams)
